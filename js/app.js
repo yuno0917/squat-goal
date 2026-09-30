@@ -320,6 +320,18 @@
     selectWeek(next, true);
   });
 
+  // スクワット プログラムメーカーへのリンク（MAX・体重・週数を引き継ぐ）
+  function updateProgramLink(n) {
+    const link = document.getElementById('program-link');
+    if (!link) return;
+    const p = new URLSearchParams();
+    p.set('m', kg(n.max));
+    p.set('bw', kg(n.bw));
+    if ([4, 6, 8, 10, 12].indexOf(n.weeks) >= 0) p.set('wk', String(n.weeks));
+    p.set('f', String(n.freq));
+    link.href = '/squat-program/?' + p.toString();
+  }
+
   // ---- 計算 ----
   function calculate(scroll) {
     const s = readForm();
@@ -337,6 +349,7 @@
     renderVerdict(prog);
     renderStudies(prog);
     renderMenu(prog);
+    updateProgramLink(prog.input);
     resultSection.hidden = false;
     shareBox.hidden = true;
     save(s);
