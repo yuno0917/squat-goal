@@ -226,8 +226,8 @@
         h('h4', { class: 'day-title' }, d.name + '　' + d.label, h('span', { class: 'badge badge-test', text: '測定' })),
         h('p', { class: 'day-lead', text: '軽めの確認の日から2〜3日あけて行います。1本ごとに5分ほど休みます。' }),
         h('ol', { class: 'test-steps' },
-          d.warmup.map(w => h('li', null, h('span', { class: 'ts-weight', text: kg(w.weight) + 'kg × ' + w.reps + '回' }), h('span', { class: 'ts-note', text: 'ウォームアップ' }))),
-          d.attempts.map((a, i) => h('li', { class: 'is-attempt' }, h('span', { class: 'ts-weight', text: (i + 1) + '本目 ' + kg(a.weight) + 'kg × 1回' }), h('span', { class: 'ts-note', text: a.note })))
+          d.warmup.map(w => h('li', null, h('span', { class: 'ts-weight', text: kg(w.weight) + 'kg ×' + w.reps + 'rep' }), h('span', { class: 'ts-note', text: 'ウォームアップ' }))),
+          d.attempts.map((a, i) => h('li', { class: 'is-attempt' }, h('span', { class: 'ts-weight', text: (i + 1) + '本目 ' + kg(a.weight) + 'kg ×1rep' }), h('span', { class: 'ts-note', text: a.note })))
         ),
         h('p', { class: 'test-next', text: '1本目が楽に挙がったら2本目へ。きつかったら、そこで終わりにします。' })
       );
@@ -239,7 +239,7 @@
           h('div', { class: 'ex-top' }, h('span', { text: 'バックスクワット' })),
           h('div', { class: 'ex-load' },
             h('span', { class: 'ex-weight' }, kg(d.weight), h('small', { text: 'kg' })),
-            h('span', { class: 'ex-sets', text: d.sets + 'セット × ' + d.reps + '回' })
+            h('span', { class: 'ex-sets', text: '×' + d.reps + 'rep ' + d.sets + 'set' })
           ),
           h('div', { class: 'ex-meta' },
             h('span', { text: '余力 ' + rirText(d.rir) }),
