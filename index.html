@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>スクワット伸び計算機｜何週間で何kg上がる？研究データで予測</title>
+<meta name="description" content="今のスクワットのMAXと体重を入れるだけで、何週間で何kg伸びるかを研究データから予測します。目標の「+◯kg」に届くかの判定と、その週数のスクワットメニューも作ります。根拠の論文つき。無料・登録不要。">
+<link rel="canonical" href="https://yuno-lab.com/squat-goal/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="スクワット伸び計算機">
+<meta property="og:description" content="何週間で何kg上がる？今のMAXと体重から、研究データでスクワットの伸びを予測します。">
+<meta property="og:url" content="https://yuno-lab.com/squat-goal/">
+<meta property="og:image" content="https://yuno-lab.com/squat-goal/og.png">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#d9480f">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "スクワット伸び計算機",
+  "url": "https://yuno-lab.com/squat-goal/",
+  "description": "今のスクワットのMAXと体重から、何週間で何kg伸びるかを研究データで予測し、目標の判定とスクワットメニューを作るWebツール。",
+  "applicationCategory": "HealthApplication",
+  "operatingSystem": "All",
+  "inLanguage": "ja",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" }
+}
+</script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7280043806672538"
+     crossorigin="anonymous"></script>
+</head>
+<body>
+
+<nav class="topnav" aria-label="サイト内">
+  <div class="wrap">
+    <a class="brand" href="index.html"><img src="favicon.svg" alt="" width="26" height="26">スクワット伸び計算機</a>
+    <ul>
+      <li><a class="navlink" href="index.html" aria-current="page">計算する</a></li>
+      <li><a class="navlink" href="evidence.html">根拠の研究</a></li>
+      <li><a class="navlink" href="/">yuno-lab</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="site-header">
+  <div class="wrap">
+    <p class="eyebrow">無料・登録不要</p>
+    <h1>スクワット伸び計算機</h1>
+    <p class="lead">「何週間で何kg上がる？」を、研究のデータから予測します。今のMAXと体重を入れると、伸びの目安、目標に届くかの判定、その週数のスクワットメニューを出します。どの数字も、もとにした研究を確かめられます。</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="card" id="form-section" aria-labelledby="form-title">
+    <h2 id="form-title"><span class="step-num">1</span>今のあなたの記録</h2>
+    <form id="calc-form" novalidate>
+      <p class="error" id="form-error" role="alert" hidden></p>
+
+      <div class="field-grid">
+        <label class="field">
+          <span class="field-name">体重</span>
+          <span class="num"><input type="number" name="bw" inputmode="decimal" min="30" max="200" step="0.1" placeholder="65" required><span class="unit">kg</span></span>
+        </label>
+
+        <div class="field">
+          <span class="field-name" id="max-label">スクワットのMAX</span>
+          <div class="seg seg-compact seg-mini" role="radiogroup" aria-labelledby="max-label">
+            <label><input type="radio" name="mode" value="max" checked><span>MAXを知っている</span></label>
+            <label><input type="radio" name="mode" value="reps"><span>重さ×回数から推定</span></label>
+          </div>
+          <div id="max-field">
+            <span class="num"><input type="number" name="max" inputmode="decimal" min="20" max="400" step="0.5" placeholder="80" aria-label="スクワットのMAX（kg）"><span class="unit">kg</span></span>
+          </div>
+          <div id="reps-field" hidden>
+            <span class="num"><input type="number" name="liftW" inputmode="decimal" min="20" max="400" step="0.5" placeholder="70" aria-label="挙げた重さ（kg）"><span class="unit">kg</span></span>
+            <span class="times">×</span>
+            <span class="num"><input type="number" name="liftR" inputmode="numeric" min="1" max="20" step="1" placeholder="5" aria-label="回数"><span class="unit">回</span></span>
+            <p class="hint" id="est-out" aria-live="polite"></p>
+            <p class="hint">限界まで挙げた回数を入れます。10回を超える場合は、10回として計算します。</p>
+          </div>
+        </div>
+
+        <label class="field">
+          <span class="field-name">期間</span>
+          <select name="weeks">
+            <option value="4">4週間</option>
+            <option value="5">5週間</option>
+            <option value="6">6週間</option>
+            <option value="7">7週間</option>
+            <option value="8" selected>8週間</option>
+            <option value="9">9週間</option>
+            <option value="10">10週間</option>
+            <option value="11">11週間</option>
+            <option value="12">12週間</option>
+            <option value="13">13週間</option>
+            <option value="14">14週間</option>
+            <option value="15">15週間</option>
+            <option value="16">16週間</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field-name">目標<small>なくてもOK</small></span>
+          <span class="num"><span class="unit">+</span><input type="number" name="target" inputmode="decimal" min="0" max="200" step="0.5" placeholder="20"><span class="unit">kg 伸ばしたい</span></span>
+        </label>
+      </div>
+
+      <fieldset>
+        <legend>スクワットをする回数</legend>
+        <div class="seg seg-compact">
+          <label><input type="radio" name="freq" value="2"><span>週2回</span></label>
+          <label><input type="radio" name="freq" value="3" checked><span>週3回</span></label>
+        </div>
+      </fieldset>
+
+      <button type="submit" class="primary">計算する</button>
+    </form>
+  </section>
+
+  <section id="result" aria-labelledby="result-title" hidden>
+    <div class="card">
+      <h2 id="result-title"><span class="step-num">2</span>伸びの予測</h2>
+      <p class="summary-meta" id="summary-meta"></p>
+      <p class="big-range" id="big-range"></p>
+      <div class="chart-box" id="chart-box"></div>
+      <p class="hint">色の帯が、研究で見られた伸びの幅です。上の線が速いペース、下の線が控えめなペースです。</p>
+      <ul class="rate-notes" id="rate-line"></ul>
+      <div class="verdict" id="verdict" hidden></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step-num">3</span>あなたに近い強さの人の研究</h2>
+      <p class="hint">体重比が近いグループを、研究ごとに1つずつ選んでいます。</p>
+      <ul class="study-list" id="study-list"></ul>
+      <p class="more-link"><a href="evidence.html#rate">ほかの研究と、計算の方法を見る</a></p>
+    </div>
+
+    <div class="card">
+      <h2><span class="step-num">4</span>この期間のスクワットメニュー</h2>
+      <div class="rules">
+        <p><strong>重さの調整：</strong>表の重さは、控えめなペースで伸びたとしたときの目安です。1セット目で余力が指定より2回以上多ければ、次のセットから2.5〜5kg上げます。余力がなければ2.5〜5kg下げます。<a class="cite-chip" href="evidence.html#autoreg">根拠</a></p>
+        <p><strong>しゃがむ深さ：</strong>太ももが床と平行になるより深くしゃがみます。<a class="cite-chip" href="evidence.html#depth">根拠</a></p>
+      </div>
+      <ul class="method-list">
+        <li>途中から、MAXの80%を超える重さを使います。<a class="cite-chip" href="evidence.html#load">根拠</a></li>
+        <li>1日のセット数は2〜3セットです。セットを増やしても、筋力の伸びは変わりませんでした。<a class="cite-chip" href="evidence.html#volume">根拠</a></li>
+        <li>週2回でも週3回でも、週の量が同じなら伸び方はほぼ同じです。<a class="cite-chip" href="evidence.html#frequency">根拠</a></li>
+        <li>限界までは追い込まず、余力を残して終えます。<a class="cite-chip" href="evidence.html#failure">根拠</a></li>
+        <li>最後の週は量を減らして疲れを抜いてから、MAXを測ります。<a class="cite-chip" href="evidence.html#taper">根拠</a></li>
+        <li>休憩の長さは、一般的な目安です。<span class="cite-chip cite-none">一般的な目安</span></li>
+      </ul>
+      <div class="actions">
+        <button type="button" class="secondary" id="share-btn">この結果のリンクをコピー</button>
+        <button type="button" class="secondary" id="print-btn">印刷する</button>
+      </div>
+      <div class="share-box" id="share-box" hidden>
+        <input type="text" id="share-url" readonly aria-label="共有リンク">
+        <p class="share-status" id="share-status" role="status"></p>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="週を選ぶ" id="week-tabs"></div>
+    <div id="week-panels"></div>
+    <p class="warmup-note">毎回、軽い重さで2〜3セットのウォームアップをしてから始めます。痛みが出たら中止してください。スクワット以外の種目は、<a href="/big3-menu/">BIG3 メニューメーカー</a>や<a href="/body-menu/">ボディメイク メニューメーカー</a>で組めます。</p>
+  </section>
+
+  <section class="card article" aria-labelledby="about-title">
+    <h2 id="about-title">この計算機の考え方</h2>
+    <p>同じメニューでも、始めたばかりの人は大きく伸び、強い人ほど伸びにくくなります。研究を並べると、伸びの速さは「スクワットのMAXが体重の何倍か」でよくそろいます。そこで、この計算機は体重比から伸びの幅を出します。</p>
+    <p>体重比が1.0倍・1.5倍・2.0倍のときの1週あたりの伸びを、研究の数字をもとに決めています。そのあいだは直線でつないでいます。</p>
+    <div class="table-wrap">
+      <table class="data-table">
+        <caption>計算に使う1週あたりの伸び（始めのMAXに対する割合）</caption>
+        <thead><tr><th scope="col">MAX ÷ 体重</th><th scope="col">控えめなペース</th><th scope="col">速いペース</th><th scope="col">8週間だと</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">1.0倍以下</th><td>2.0%</td><td>3.5%</td><td>+16〜28%</td></tr>
+          <tr><th scope="row">1.5倍</th><td>1.0%</td><td>2.0%</td><td>+8〜16%</td></tr>
+          <tr><th scope="row">2.0倍以上</th><td>0.5%</td><td>1.5%</td><td>+4〜12%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>くわしい研究の内容と、計算の方法は<a href="evidence.html">根拠の研究</a>で紹介しています。</p>
+
+    <h2>よくある質問</h2>
+    <h3>本当にこの通りに伸びますか？</h3>
+    <p>予測は、研究に参加した人たちの平均的な伸びをもとにしています。同じ研究の中でも、伸び方には大きな個人差がありました。睡眠、食事、フォーム、ケガなどでも変わります。目安として使ってください。</p>
+    <h3>女性でも使えますか？</h3>
+    <p>使えます。下半身の筋力の伸びには、男女で差が見られませんでした。そのため、性別は計算に使っていません。</p>
+    <h3>MAXを測ったことがありません。</h3>
+    <p>「重さ×回数から推定」を選んでください。限界まで挙げた重さと回数から、MAXを推定します。MAXの測定に慣れていない人は、測るだけで数%上がることがあります。</p>
+    <h3>16週より長い期間は計算できませんか？</h3>
+    <p>研究の多くは6〜8週間で、長いものでも12週間ほどです。そのため、9週目からは半分のペースで控えめに計算し、16週より先は計算していません。大会に出ている人の記録でも、スクワットの伸びは1年で最大20〜25kgでした。</p>
+    <h3>スモロフなどの有名なプログラムのほうが伸びますか？</h3>
+    <p>「◯週間で+◯kg」をうたう有名なプログラムは多くありますが、研究で試されたものは見つかりませんでした。くわしくは<a href="evidence.html#programs">有名なプログラムについて</a>で紹介しています。</p>
+
+    <h2 id="disclaimer">免責事項</h2>
+    <div class="disclaimer">
+      <p>この計算機の予測とメニューは一般的な情報です。個人の体調やケガの経歴は考慮していません。持病がある方や体調に不安がある方は、医師に相談してから始めてください。</p>
+      <p>MAXの測定は、補助者をつけるか、セーフティバーを正しい高さにして行ってください。トレーニングは自己責任で行ってください。このツールの利用によって生じたケガや損害について、運営者は責任を負いません。</p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <a href="/">yuno-lab トップ</a>
+    <span aria-hidden="true">・</span>
+    <a href="evidence.html">根拠の研究</a>
+    <span aria-hidden="true">・</span>
+    <a href="/about.html">このサイトについて</a>
+    <span aria-hidden="true">・</span>
+    <a href="/privacy.html">プライバシーポリシー</a>
+    <span aria-hidden="true">・</span>
+    <a href="#disclaimer">免責事項</a>
+  </div>
+</footer>
+
+<script src="js/sq-data.js"></script>
+<script src="js/sq-calc.js"></script>
+<script src="js/sq-chart.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

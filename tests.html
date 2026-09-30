@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>スクワット伸び計算機 ロジックのテスト</title>
+<style>
+  body { font-family: system-ui, "Yu Gothic UI", Meiryo, sans-serif; margin: 16px; line-height: 1.6; background: #fff; color: #1a1d21; }
+  #summary { font-size: 1.25rem; font-weight: 700; }
+  .pass { color: #2b8a3e; }
+  .fail { color: #c92a2a; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>ロジックのテスト</h1>
+<p id="summary">実行中…</p>
+<ul id="results"></ul>
+
+<script src="js/sq-data.js"></script>
+<script src="js/sq-calc.js"></script>
+<script>
+(function () {
+  'use strict';
+  const SQ = window.SQ;
+  const D = SQ.DATA;
+  const results = [];
+  function test(name, fn) {
+    try { fn(); results.push({ name, ok: true }); }
+    catch (e) { results.push({ name, ok: false, msg: e && e.message ? e.message : String(e) }); }
+  }
+  function eq(a, b, label) {
+    const x = JSON.stringify(a), y = JSON.stringify(b);
+    if (x !== y) throw new Error((label ? label + ': ' : '') + '期待値 ' + y + ' / 実際 ' + x);
+  }
+  function near(a, b, label, tol) {
+    if (!(Math.abs(a - b) <= (tol || 1e-6))) throw new Error((label ? label + ': ' : '') + '期待値 ' + b + ' / 実際 ' + a);
+  }
+  function ok(c, label) { if (!c) throw new Error(label || '条件を満たしていません'); }
+  const isStep = x => Math.abs(x / D.step - Math.round(x / D.step)) < 1e-9;
+
+  // ---- MAX の推定 ----
+  test('推定MAX：60kg×5回 → 70kg', () => eq(SQ.estimate1RM(60, 5), 70));
+  test('推定MAX：10回を超える回数は10回として計算', () => eq(SQ.estimate1RM(60, 15), SQ.estimate1RM(60, 10)));
+  test('推定MAX：1回ならその重さ、不正な入力は null', () => {
+    eq(SQ.estimate1RM(100, 1), 100);
+    eq(SQ.estimate1RM(0, 5), null);
+    eq(SQ.estimate1RM(60, 0), null);
+  });
+
+  // ---- 伸びの速さ ----
+  test('体重比1.0・1.5・2.0倍は表の値そのまま', () => {
+    eq(SQ.ratesFor(1.0), { low: 2.0, high: 3.5 });
+    eq(SQ.ratesFor(1.5), { low: 1.0, high: 2.0 });
+    eq(SQ.ratesFor(2.0), { low: 0.5, high: 1.5 });
+  });
+  test('あいだは直線でつなぐ（1.25倍 → 1.5〜2.75%）', () => {
+    const r = SQ.ratesFor(1.25);
+    near(r.low, 1.5, 'low'); near(r.high, 2.75, 'high');
+  });
+  test('1.0倍未満と2.0倍より上は端の値', () => {
+    eq(SQ.ratesFor(0.6), SQ.ratesFor(1.0));
+    eq(SQ.ratesFor(2.8), SQ.ratesFor(2.0));
+  });
+  test('強いほど遅く伸びる（体重比が上がると幅は下がる）', () => {
+    for (let r = 0.8; r < 2.2; r += 0.05) {
+      const a = SQ.ratesFor(r), b = SQ.ratesFor(r + 0.05);
+      ok(b.low <= a.low + 1e-9 && b.high <= a.high + 1e-9, r.toFixed(2));
+      ok(a.low < a.high, '下限 < 上限 ' + r.toFixed(2));
+    }
+  });
+  test('8週までは同じペース、9週目からは半分', () => {
+    near(SQ.gainPct(8, 2), 16);
+    near(SQ.gainPct(12, 2), 20);
+    near(SQ.gainPct(16, 2), 24);
+  });
+  test('ページの表（8週間の伸び）と計算が一致', () => {
+    const t = [[1.0, 16, 28], [1.5, 8, 16], [2.0, 4, 12]];
+    t.forEach(([ratio, lo, hi]) => {
+      const r = SQ.ratesFor(ratio);
+      near(SQ.gainPct(8, r.low), lo, ratio + ' 下限');
+      near(SQ.gainPct(8, r.high), hi, ratio + ' 上限');
+    });
+  });
+
+  // ---- 研究のデータ ----
+  test('研究の点は14グループ、そのうち11グループが幅に入る', () => {
+    eq(SQ.bandCoverage(), { inside: 11, total: 14 });
+  });
+  test('幅から外れた研究は、どれも速いペースより速い', () => {
+    D.studies.forEach(s => ok(SQ.studyPosition(s) !== 'below', s.id + ' が控えめなペースより遅い'));
+    eq(D.studies.filter(s => SQ.studyPosition(s) === 'above').map(s => s.id), ['cholewa', 'travis-exp', 'aube-18']);
+  });
+  test('論文の数字から計算した伸び（例：Helms 2018 の%群 +10.0%）', () => {
+    const s = D.studies.find(x => x.id === 'helms-pct');
+    near(SQ.studyRate(s).pct, 9.99, 'pct', 0.01);
+  });
+  test('研究はすべて出典つき', () => {
+    D.studies.forEach(s => ok(D.refs[s.ref] && D.refs[s.ref].doi, s.id));
+  });
+  test('近い研究は、同じ論文が重ならず近い順', () => {
+    const list = SQ.nearestStudies(1.3, 3);
+    eq(list.length, 3);
+    eq(list[0].ref, 'schoenfeld2019');
+    eq(new Set(list.map(s => s.ref)).size, 3);
+    ok(Math.abs(list[0].ratio - 1.3) <= Math.abs(list[1].ratio - 1.3) && Math.abs(list[1].ratio - 1.3) <= Math.abs(list[2].ratio - 1.3), '近い順');
+  });
+
+  // ---- 予測と判定 ----
+  test('予測：80kg・体重80kg・8週 → 92.8〜102.4kg', () => {
+    const p = SQ.predict(80, 80, 8);
+    near(p.lowMax, 92.8); near(p.highMax, 102.4);
+    eq(p.curve.length, 9);
+    near(p.curve[0].low, 80); near(p.curve[8].high, 102.4);
+  });
+  test('判定：控えめでも届く / 範囲内 / 範囲外', () => {
+    const p = SQ.predict(80, 80, 8);
+    eq(SQ.verdict(p, 10), 'likely');
+    eq(SQ.verdict(p, 20), 'possible');
+    eq(SQ.verdict(p, 30), 'beyond');
+    eq(SQ.verdict(p, 0), null);
+  });
+  test('必要な週数：100kg・体重100kg・+20kg → 速いペース6週、控えめ12週', () => {
+    eq(SQ.weeksNeeded(100, 100, 20), { fastest: 6, slowest: 12 });
+  });
+  test('1年で届かない目標は null', () => {
+    eq(SQ.weeksNeeded(200, 90, 150).slowest, null);
+  });
+
+  // ---- 入力 ----
+  test('範囲外の週数・回数・目標は既定値に直す', () => {
+    const n = SQ.normalizeInput({ max: 100, bw: 70, weeks: 30, freq: 5, target: -3 });
+    eq([n.weeks, n.freq, n.target], [8, 3, null]);
+  });
+  test('体重とMAXが空・範囲外ならエラー', () => {
+    eq(SQ.validate(SQ.normalizeInput({ max: '', bw: '' })).length, 2);
+    eq(SQ.validate(SQ.normalizeInput({ max: 100, bw: 70 })).length, 0);
+    eq(SQ.validate(SQ.normalizeInput({ max: 500, bw: 70 })).length, 1);
+  });
+
+  // ---- メニュー（全組み合わせ） ----
+  const CASES = [];
+  for (let w = D.minWeeks; w <= D.maxWeeks; w++) [2, 3].forEach(freq =>
+    [[60, 75], [80, 65], [100, 70], [140, 80], [180, 85]].forEach(([max, bw]) => CASES.push({ max, bw, weeks: w, freq })));
+  const label = c => c.max + 'kg/体重' + c.bw + '/' + c.weeks + '週/週' + c.freq;
+
+  test('全組み合わせで週の数と日数が正しい', () => {
+    CASES.forEach(c => {
+      const p = SQ.buildProgram(c);
+      eq(p.weeks.length, c.weeks, label(c));
+      p.weeks.forEach((w, i) => {
+        const last = i === p.weeks.length - 1;
+        eq(w.phase === 'test', last, label(c) + ' 第' + w.week + '週');
+        eq(w.days.length, last ? 2 : c.freq, label(c) + ' 第' + w.week + '週の日数');
+      });
+    });
+  });
+  test('段階は基礎→筋力→仕上げの順で、どれも1週以上', () => {
+    CASES.forEach(c => {
+      const p = SQ.buildProgram(c);
+      const order = p.weeks.slice(0, -1).map(w => w.phase);
+      ok(order.join(',') === order.slice().sort((a, b) => ['base', 'strength', 'peak'].indexOf(a) - ['base', 'strength', 'peak'].indexOf(b)).join(','), label(c));
+      ['base', 'strength', 'peak'].forEach(k => ok(p.alloc[k] >= 1, label(c) + ' ' + k));
+    });
+  });
+  test('重さはすべて2.5kg刻みで、バー（20kg）以上', () => {
+    CASES.forEach(c => SQ.buildProgram(c).weeks.forEach(w => w.days.forEach(d => {
+      const ws = d.type === 'test' ? d.warmup.map(x => x.weight).concat(d.attempts.map(a => a.weight)) : [d.weight];
+      ws.forEach(x => ok(isStep(x) && x >= D.bar, label(c) + ' 第' + w.week + '週 ' + x));
+    })));
+  });
+  test('筋力と仕上げの段階の重い日は、MAXの80%以上', () => {
+    CASES.forEach(c => SQ.buildProgram(c).weeks.forEach(w => {
+      if (w.phase !== 'strength' && w.phase !== 'peak') return;
+      const d = w.days[0];
+      ok(SQ.loadPct(d.reps, d.rir) >= 0.8, label(c) + ' 第' + w.week + '週 ' + d.reps + '回 余力' + d.rir);
+    }));
+  });
+  test('重い日の重さは週を追うごとに下がらない', () => {
+    CASES.forEach(c => {
+      const heavy = SQ.buildProgram(c).weeks.slice(0, -1).map(w => w.days[0].weight);
+      for (let i = 1; i < heavy.length; i++) ok(heavy[i] >= heavy[i - 1], label(c) + ' ' + heavy.join('→'));
+    });
+  });
+  test('軽い日と回数の日は、重い日より軽い', () => {
+    CASES.forEach(c => SQ.buildProgram(c).weeks.slice(0, -1).forEach(w => {
+      w.days.slice(1).forEach(d => ok(SQ.loadPct(d.reps, d.rir) < SQ.loadPct(w.days[0].reps, w.days[0].rir), label(c) + ' 第' + w.week + '週 ' + d.label));
+    }));
+  });
+  test('1日のセット数は3セットまで、余力は1回以上', () => {
+    CASES.forEach(c => SQ.buildProgram(c).weeks.forEach(w => w.days.forEach(d => {
+      if (d.type === 'test') return;
+      ok(d.sets >= 2 && d.sets <= 3, label(c) + ' セット数 ' + d.sets);
+      ok(d.rir >= 1, label(c) + ' 余力 ' + d.rir);
+    })));
+  });
+  test('測定日：ウォームアップと試技は軽い順で、1本目は今のMAX以上', () => {
+    CASES.forEach(c => {
+      const t = SQ.buildProgram(c).weeks.slice(-1)[0].days[1];
+      const seq = t.warmup.map(x => x.weight).concat(t.attempts.map(a => a.weight));
+      for (let i = 1; i < seq.length; i++) ok(seq[i] > seq[i - 1], label(c) + ' ' + seq.join('→'));
+      ok(t.attempts[0].weight >= Math.floor(c.max / D.step) * D.step, label(c) + ' 1本目');
+      ok(t.warmup.length >= 3, label(c) + ' ウォームアップ ' + t.warmup.length + '本');
+    });
+  });
+  test('範囲内の目標は3本目の重さになる', () => {
+    const p = SQ.buildProgram({ max: 80, bw: 80, weeks: 8, freq: 3, target: 20 });
+    const a = p.weeks.slice(-1)[0].days[1].attempts;
+    eq(a[2].weight, 100);
+    eq(a[2].note, 'あなたの目標');
+  });
+  test('範囲外の目標は3本目にしない', () => {
+    const p = SQ.buildProgram({ max: 80, bw: 80, weeks: 8, freq: 3, target: 40 });
+    ok(p.weeks.slice(-1)[0].days[1].attempts[2].note !== 'あなたの目標');
+  });
+  test('例：80kg・体重65kg・8週・週3回の1週目と測定日', () => {
+    const p = SQ.buildProgram({ max: 80, bw: 65, weeks: 8, freq: 3 });
+    eq(p.weeks[0].days.map(d => [d.label, d.sets, d.reps, d.rir, d.weight]),
+      [['重い日', 3, 8, 3, 57.5], ['軽い日', 2, 8, 9, 50], ['回数の日', 3, 11, 4, 52.5]]);
+    eq(p.weeks[7].days[1].attempts.map(a => a.weight), [82.5, 90, 95]);
+  });
+
+  const ul = document.getElementById('results');
+  results.forEach(r => {
+    const li = document.createElement('li');
+    li.className = r.ok ? 'pass' : 'fail';
+    li.textContent = (r.ok ? 'PASS ' : 'FAIL ') + r.name + (r.msg ? '：' + r.msg : '');
+    ul.appendChild(li);
+  });
+  const failed = results.filter(r => !r.ok).length;
+  const s = document.getElementById('summary');
+  s.textContent = failed ? 'FAIL：' + results.length + '件中 ' + failed + '件失敗' : 'ALL PASS：' + results.length + '件';
+  s.className = failed ? 'fail' : 'pass';
+})();
+</script>
+</body>
+</html>
