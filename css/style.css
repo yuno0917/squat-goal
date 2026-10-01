@@ -685,3 +685,12 @@ select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ---- 記事への小さなリンク ---- */
 .link-list { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0; padding: 0; list-style: none; font-size: .92rem; }
+
+/* ---- 入力欄（MAXがわからないときのリンク・折りたたんだ設定） ---- */
+.form-field { margin-bottom: 20px; }
+.field .link-btn, .mode-line .link-btn { align-self: flex-start; text-align: left; }
+.mode-line { margin: -8px 0 20px; }
+.form-more { margin: 0 0 20px; }
+.form-more > .field-grid { margin: 12px 0 0; }
+.form-more > fieldset { margin: 12px 0 0; }
+.field-grid > fieldset { margin: 0; }

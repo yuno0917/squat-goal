@@ -11,6 +11,7 @@
   const maxField = document.getElementById('max-field');
   const repsField = document.getElementById('reps-field');
   const estOut = document.getElementById('est-out');
+  const modeBtn = document.getElementById('mode-btn');
   const resultSection = document.getElementById('result');
   const summaryMeta = document.getElementById('summary-meta');
   const bigRange = document.getElementById('big-range');
@@ -67,7 +68,7 @@
     const e = form.elements;
     ['bw', 'max', 'liftW', 'liftR', 'target'].forEach(k => { if (s[k] != null) e[k].value = s[k]; });
     if (s.weeks != null) e.weeks.value = String(s.weeks);
-    if (s.mode) setRadio('mode', s.mode);
+    form.elements.mode.value = s.mode === 'reps' ? 'reps' : 'max';
     syncMode();
   }
 
@@ -81,6 +82,7 @@
     const reps = form.elements.mode.value === 'reps';
     maxField.hidden = reps;
     repsField.hidden = !reps;
+    modeBtn.textContent = reps ? 'MAXを直接入れる' : 'MAXがわからないときは、重さと回数から計算する';
     const est = SQ.estimate1RM(form.elements.liftW.value, form.elements.liftR.value);
     estOut.textContent = reps && est ? '推定MAX：' + kg(est) + 'kg' : '';
   }
@@ -219,7 +221,12 @@
     e.preventDefault();
     calculate(true);
   });
-  form.addEventListener('change', e => { if (e.target.name === 'mode') syncMode(); });
+  modeBtn.addEventListener('click', () => {
+    const e = form.elements;
+    e.mode.value = e.mode.value === 'reps' ? 'max' : 'reps';
+    syncMode();
+    (e.mode.value === 'reps' ? e.liftW : e.max).focus();
+  });
   form.addEventListener('input', e => { if (e.target.name === 'liftW' || e.target.name === 'liftR') syncMode(); });
 
   shareBtn.addEventListener('click', async () => {
