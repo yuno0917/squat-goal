@@ -5,8 +5,6 @@
   const D = SQ.DATA;
 
   const EPS = 1e-9;
-  const roundTo = (x, step) => Math.round(x / step) * step;
-  const floorTo = (x, step) => Math.floor(x / step + EPS) * step;
 
   // 重量 × 回数から MAX を推定する（Epley の式、回数は10回まで）
   function estimate1RM(weight, reps) {
@@ -125,29 +123,6 @@
     return out;
   }
 
-  // reps 回を、あと rir 回できる余力を残して終える重さ（MAX に対する割合）
-  function loadPct(reps, rir) {
-    return 1 / (1 + (reps + rir) / 30);
-  }
-
-  // 測定週を除いた週を、基礎・筋力・仕上げに分ける
-  function allocatePhases(trainWeeks) {
-    let base = Math.max(1, Math.round(trainWeeks * D.phaseShare.base));
-    let strength = Math.max(1, Math.round(trainWeeks * D.phaseShare.strength));
-    let peak = trainWeeks - base - strength;
-    while (peak < 1) {
-      if (base >= strength && base > 1) base--;
-      else if (strength > 1) strength--;
-      else break;
-      peak = trainWeeks - base - strength;
-    }
-    return { base, strength, peak };
-  }
-
-  function weightFor(projMax, reps, rir) {
-    return Math.max(D.bar, roundTo(projMax * loadPct(reps, rir), D.step));
-  }
-
   function normalizeInput(input) {
     const i = input || {};
     const num = v => (v === '' || v == null ? NaN : Number(v));
@@ -155,10 +130,9 @@
     const bw = num(i.bw);
     let weeks = Math.round(num(i.weeks));
     if (!(weeks >= D.minWeeks && weeks <= D.maxWeeks)) weeks = D.defaultWeeks;
-    const freq = Number(i.freq) === 2 ? 2 : 3;
     const t = num(i.target);
     const target = t > 0 && t <= 200 ? t : null;
-    return { max, bw, weeks, freq, target };
+    return { max, bw, weeks, target };
   }
 
   // 入力の誤り（空なら問題なし）
@@ -169,91 +143,8 @@
     return errors;
   }
 
-  function buildProgram(input) {
-    const n = normalizeInput(input);
-    const { max, bw, weeks, freq, target } = n;
-    const pred = predict(max, bw, weeks);
-    const alloc = allocatePhases(weeks - 1);
-    const seq = [];
-    ['base', 'strength', 'peak'].forEach(k => {
-      for (let i = 0; i < alloc[k]; i++) seq.push({ phase: k, i, n: alloc[k] });
-    });
-
-    const plan = D.dayPlan[freq];
-    const out = seq.map((p, idx) => {
-      const week = idx + 1;
-      const ph = D.phases[p.phase];
-      const t = p.n === 1 ? 0 : p.i / (p.n - 1);
-      const reps = ph.reps[Math.min(ph.reps.length - 1, Math.floor(p.i * ph.reps.length / p.n))];
-      const rir = Math.round(ph.rir[0] + (ph.rir[1] - ph.rir[0]) * t);
-      // 控えめなペースで伸びたとしたときの、この週の始めの MAX
-      const projMax = max * (1 + gainPct(week - 1, pred.rates.low) / 100);
-      const days = plan.map((type, di) => {
-        const dt = D.dayTypes[type];
-        const dReps = reps + dt.repsAdd;
-        const dRir = rir + dt.rirAdd;
-        const weight = weightFor(projMax, dReps, dRir);
-        return {
-          name: 'Day' + (di + 1),
-          type,
-          label: dt.name,
-          sets: dt.sets || ph.sets,
-          reps: dReps,
-          rir: dRir,
-          weight,
-          pctOfMax: weight / max,
-          rest: D.rest[type]
-        };
-      });
-      return { week, phase: p.phase, phaseName: ph.name, note: ph.note, projMax, days };
-    });
-
-    // 最後の週: 量を減らしてから測る
-    const projLast = max * (1 + gainPct(weeks - 1, pred.rates.low) / 100);
-    const opener = {
-      name: 'Day1',
-      type: 'opener',
-      label: '軽めの確認',
-      sets: 2,
-      reps: 2,
-      rir: 3,
-      weight: weightFor(projLast, 2, 3),
-      rest: D.rest.heavy
-    };
-    opener.pctOfMax = opener.weight / max;
-
-    const a1 = Math.max(floorTo(max + pred.lowGain * 0.5, D.step), floorTo(max, D.step));
-    const a2 = Math.max(roundTo(pred.lowMax, D.step), a1 + D.step);
-    let third = (pred.lowMax + pred.highMax) / 2;
-    let thirdIsTarget = false;
-    if (target != null && verdict(pred, target) !== 'beyond' && max + target > a2) {
-      third = max + target;
-      thirdIsTarget = true;
-    }
-    const a3 = Math.max(roundTo(third, D.step), a2 + D.step);
-    const warmup = [];
-    D.warmup.forEach(w => {
-      const kg = Math.max(D.bar, roundTo(a1 * w.pct, D.step));
-      if (kg < a1 && (!warmup.length || kg > warmup[warmup.length - 1].weight)) warmup.push({ weight: kg, reps: w.reps });
-    });
-    const test = {
-      name: 'Day2',
-      type: 'test',
-      label: 'MAX測定',
-      warmup,
-      attempts: [
-        { weight: a1, note: '確実に挙げたい重さ' },
-        { weight: a2, note: '控えめな予測' },
-        { weight: a3, note: thirdIsTarget ? 'あなたの目標' : '調子が良ければ' }
-      ]
-    };
-    out.push({ week: weeks, phase: 'test', phaseName: '測定', note: '量を減らして疲れを抜き、週の最後にMAXを測ります。', projMax: projLast, days: [opener, test] });
-
-    return { input: n, pred, alloc, weeks: out };
-  }
-
   Object.assign(SQ, {
     estimate1RM, ratesFor, gainPct, studyRate, studyPosition, bandCoverage, predict, weeksNeeded, verdict,
-    nearestStudies, loadPct, allocatePhases, normalizeInput, validate, buildProgram
+    nearestStudies, normalizeInput, validate
   });
 })(typeof window !== 'undefined' ? window : globalThis);

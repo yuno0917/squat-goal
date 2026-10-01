@@ -41,37 +41,6 @@
       { id: 'aube-24', ref: 'aube2022', who: '体重の2倍以上を挙げる経験者', group: '下半身 週24セット', ratio: 2.09, weeks: 8, pct: 5.4, gainKg: 9.5, how: '週2回' }
     ],
 
-    // メニューの段階。回数と余力（あと何回できるか）から重さを決める。
-    phases: {
-      base: { name: '基礎', reps: [8], rir: [3, 2], sets: 3, note: '8回で、フォームを固めながら量をこなす段階です。' },
-      strength: { name: '筋力', reps: [5], rir: [2, 1], sets: 3, note: '5回で、重さに慣れる段階です。MAXの80%を超える重さになります。' },
-      peak: { name: '仕上げ', reps: [3, 2], rir: [2, 1], sets: 3, note: '3回と2回で、MAXに近い重さに体を慣らす段階です。' }
-    },
-    phaseShare: { base: 0.4, strength: 0.35 },
-
-    // 日ごとの変化（重い日を基準に、回数と余力を変える）
-    dayTypes: {
-      heavy: { name: '重い日', repsAdd: 0, rirAdd: 0, sets: null },
-      light: { name: '軽い日', repsAdd: 0, rirAdd: 6, sets: 2 },
-      volume: { name: '回数の日', repsAdd: 3, rirAdd: 1, sets: 3 }
-    },
-    dayPlan: {
-      2: ['heavy', 'volume'],
-      3: ['heavy', 'light', 'volume']
-    },
-
-    rest: { heavy: '3〜5分', light: '2〜3分', volume: '3〜4分' },
-    step: 2.5,
-    bar: 20,
-
-    // 測定の日のウォームアップ（1本目の重さに対する割合と回数）
-    warmup: [
-      { pct: 0.5, reps: 5 },
-      { pct: 0.7, reps: 3 },
-      { pct: 0.8, reps: 2 },
-      { pct: 0.9, reps: 1 }
-    ],
-
     refs: {
       kubo2019: { short: 'Kubo 2019', text: 'Kubo, K., Ikebukuro, T., & Yata, H. (2019). Effects of squat training with different depths on lower limb muscle volumes. European Journal of Applied Physiology, 119(9), 1933–1942.', doi: '10.1007/s00421-019-04181-y' },
       wetmore2020: { short: 'Wetmore 2020', text: 'Wetmore, A. B., Moquin, P. A., Carroll, K. M., Fry, A. C., Hornsby, W. G., & Stone, M. H. (2020). The effect of training status on adaptations to 11 weeks of block periodization training. Sports, 8(11), 145.', doi: '10.3390/sports8110145' },

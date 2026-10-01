@@ -18,15 +18,13 @@
   const chartBox = document.getElementById('chart-box');
   const verdictBox = document.getElementById('verdict');
   const studyList = document.getElementById('study-list');
-  const tabsEl = document.getElementById('week-tabs');
-  const panelsEl = document.getElementById('week-panels');
+  const programLink = document.getElementById('program-link');
   const shareBtn = document.getElementById('share-btn');
-  const printBtn = document.getElementById('print-btn');
   const shareBox = document.getElementById('share-box');
   const shareInput = document.getElementById('share-url');
   const shareStatus = document.getElementById('share-status');
 
-  let currentInput = null;
+  let current = null;
 
   // ---- 小さな DOM ヘルパー（文字列は必ず textContent として入れる） ----
   function h(tag, props, ...children) {
@@ -56,16 +54,7 @@
   // ---- フォームの状態 ----
   function readForm() {
     const e = form.elements;
-    return {
-      bw: e.bw.value,
-      mode: e.mode.value,
-      max: e.max.value,
-      liftW: e.liftW.value,
-      liftR: e.liftR.value,
-      weeks: e.weeks.value,
-      target: e.target.value,
-      freq: e.freq.value
-    };
+    return { bw: e.bw.value, mode: e.mode.value, max: e.max.value, liftW: e.liftW.value, liftR: e.liftR.value, weeks: e.weeks.value, target: e.target.value };
   }
 
   function setRadio(name, value) {
@@ -79,7 +68,6 @@
     ['bw', 'max', 'liftW', 'liftR', 'target'].forEach(k => { if (s[k] != null) e[k].value = s[k]; });
     if (s.weeks != null) e.weeks.value = String(s.weeks);
     if (s.mode) setRadio('mode', s.mode);
-    if (s.freq) setRadio('freq', s.freq);
     syncMode();
   }
 
@@ -116,7 +104,6 @@
     p.set('bw', kg(n.bw));
     p.set('m', kg(n.max));
     p.set('wk', String(n.weeks));
-    p.set('f', String(n.freq));
     if (n.target) p.set('t', kg(n.target));
     return p;
   }
@@ -128,8 +115,7 @@
       mode: 'max',
       max: p.get('m') || '',
       weeks: p.get('wk') || String(D.defaultWeeks),
-      target: p.get('t') || '',
-      freq: p.get('f') || '3'
+      target: p.get('t') || ''
     };
   }
   const baseUrl = () => location.href.split(/[?#]/)[0];
@@ -138,204 +124,76 @@
   }
 
   // ---- 描画: 予測 ----
-  function renderPrediction(prog) {
-    const n = prog.input;
-    const p = prog.pred;
-    summaryMeta.textContent = '今のMAX ' + kg(n.max) + 'kg・体重 ' + kg(n.bw) + 'kg（体重の' + p.ratio.toFixed(2) + '倍）・' + n.weeks + '週間';
+  function renderPrediction(n, p) {
+    summaryMeta.textContent = 'MAX ' + kg(n.max) + 'kg・体重 ' + kg(n.bw) + 'kg（' + p.ratio.toFixed(2) + '倍）・' + n.weeks + '週間';
     bigRange.replaceChildren(
       h('span', { class: 'big-label', text: n.weeks + '週間後の予想MAX' }),
       h('span', { class: 'big-num', text: kg0(p.lowMax) + '〜' + kg0(p.highMax) + 'kg' }),
       h('span', { class: 'big-gain', text: '+' + kg0(p.lowGain) + '〜' + kg0(p.highGain) + 'kg（+' + pct1(p.lowPct) + '〜' + pct1(p.highPct) + '%）' })
     );
-    const notes = [
-      h('li', null, '体重の' + p.ratio.toFixed(2) + '倍の人は、研究では1週あたり約' + pct1(p.rates.low) + '〜' + pct1(p.rates.high) + '%伸びています。今のMAXが体重に比べて軽いほど、速く伸びます。', cite('rate'))
+    const line = [
+      '帯は、研究で見られた伸びの幅です。体重の' + p.ratio.toFixed(2) + '倍の人は、1週あたり約' + pct1(p.rates.low) + '〜' + pct1(p.rates.high) + '%伸びていました。', cite('rate')
     ];
-    if (n.weeks > D.fullRateWeeks) notes.push(h('li', null, (D.fullRateWeeks + 1) + '週目からは、研究が少ないため半分のペースで控えめに計算しています。', cite('long')));
-    notes.push(h('li', null, 'MAXを測り慣れていない人は、測るだけで数%上がることがあります。予測の伸びには、その分も含まれます。', cite('practice')));
-    notes.push(h('li', null, '下半身の筋力の伸びに男女差は見られなかったため、性別は計算に使っていません。', cite('sex')));
-    rateLine.replaceChildren(...notes);
+    if (n.weeks > D.fullRateWeeks) line.push(' ' + (D.fullRateWeeks + 1) + '週目からは、研究が少ないため半分のペースで計算しています。', cite('long'));
+    rateLine.replaceChildren(...line);
     chartBox.replaceChildren(SQ.chart.bandChart(p, n.target));
   }
 
   // ---- 描画: 目標の判定 ----
-  function renderVerdict(prog) {
-    const n = prog.input;
-    const p = prog.pred;
+  function renderVerdict(n, p) {
     if (!n.target) {
       verdictBox.hidden = true;
       return;
     }
     const v = SQ.verdict(p, n.target);
     const need = SQ.weeksNeeded(n.max, n.bw, n.target);
-    const titles = {
-      likely: '届く見込みが高い目標です',
-      possible: '研究の範囲内の目標です',
-      beyond: n.weeks + '週間では届きにくい目標です'
-    };
-    const lines = [];
+    const slow = need.slowest ? '約' + need.slowest + '週' : '1年以上';
+    const titles = { likely: '届く見込みが高い目標です', possible: '研究の範囲内の目標です', beyond: n.weeks + '週間では届きにくい目標です' };
+    let text;
     if (v === 'likely') {
-      lines.push('+' + kg(n.target) + 'kgは、研究で見られた控えめなペースでも' + n.weeks + '週間で届く伸びです。');
+      text = '控えめなペースでも、' + n.weeks + '週間で+' + kg(n.target) + 'kgに届きます。';
     } else if (v === 'possible') {
-      lines.push('+' + kg(n.target) + 'kgは、研究で見られた速いペースなら' + n.weeks + '週間で届きます。控えめなペースだと' + (need.slowest ? '約' + need.slowest + '週' : '1年以上') + 'かかります。');
+      text = '速いペースなら' + n.weeks + '週間で届きます。控えめなペースだと' + slow + 'かかります。';
+    } else if (need.fastest) {
+      text = '速いペースでも' + n.weeks + '週間では+' + kg0(p.highGain) + 'kgまでです。+' + kg(n.target) + 'kgには、約' + need.fastest + '週〜' + (need.slowest ? need.slowest + '週' : '1年以上') + 'かかる見込みです。';
     } else {
-      lines.push('研究で見られた速いペースでも、' + n.weeks + '週間の伸びは+' + kg0(p.highGain) + 'kgまでです。');
-      if (need.fastest) {
-        lines.push('+' + kg(n.target) + 'kgには、速いペースで約' + need.fastest + '週、控えめなペースで約' + (need.slowest ? need.slowest + '週' : '1年以上') + 'が目安です。' + (need.slowest == null || need.slowest > D.maxWeeks ? '16週より先は研究が少ないため、あくまで目安です。' : ''));
-      } else {
-        lines.push('1年以上かかる見込みです。大会に出ている人の記録でも、スクワットの伸びは1年で最大20〜25kgでした。');
-      }
-      lines.push(n.weeks + '週間なら、+' + kg0(p.lowGain) + '〜' + kg0(p.highGain) + 'kgが現実的な目標です。');
+      text = '1年以上かかる見込みです。大会に出ている人でも、スクワットの伸びは1年で最大20〜25kgでした。';
     }
     verdictBox.className = 'verdict verdict-' + v;
-    verdictBox.replaceChildren(
-      h('p', { class: 'verdict-title', text: titles[v] }),
-      ...lines.map(t => h('p', { text: t })),
-      h('p', { class: 'verdict-cite' }, cite('rate', '判定のもとになった研究'), v === 'beyond' ? cite('long', '長い期間の伸び') : null)
-    );
+    verdictBox.replaceChildren(h('p', { class: 'verdict-title', text: titles[v] }), h('p', { text: text }));
     verdictBox.hidden = false;
   }
 
   // ---- 描画: 近い研究 ----
-  function renderStudies(prog) {
-    const n = prog.input;
-    const near = SQ.nearestStudies(prog.pred.ratio, 3);
+  function renderStudies(n, p) {
+    const near = SQ.nearestStudies(p.ratio, 3);
     studyList.replaceChildren(...near.map(s => {
       const r = D.refs[s.ref];
-      const gainText = s.pre != null ? '+' + kg(s.gain) + 'kg（+' + pct1(s.pct) + '%）' : '+' + pct1(s.pct) + '%' + (s.gainKg ? '（+' + kg(s.gainKg) + 'kg）' : '');
       const yours = n.max * SQ.gainPct(n.weeks, s.perWeek) / 100;
       return h('li', { class: 'study' },
         h('div', { class: 'study-top' },
-          h('span', { class: 'study-ratio', text: '体重の' + (s.approxRatio ? '約' : '') + s.ratio.toFixed(2) + '倍' }),
+          h('span', { class: 'study-ratio', text: '体重の' + (s.approxRatio ? '約' : '') + s.ratio.toFixed(2) + '倍の人' }),
           h('a', { class: 'study-ref', href: 'https://doi.org/' + r.doi, rel: 'noopener', text: r.short })
         ),
-        h('p', { class: 'study-who', text: s.who + (s.group ? '（' + s.group + '）' : '') + '・' + s.how }),
-        h('p', { class: 'study-result', text: s.weeks + '週間で' + gainText + ' → 1週あたり+' + pct1(s.perWeek) + '%' }),
-        h('p', { class: 'study-yours', text: 'この伸び方をあなたの' + n.weeks + '週間に当てはめると、約+' + kg0(yours) + 'kg' })
+        h('p', { class: 'study-result', text: s.weeks + '週間で+' + pct1(s.pct) + '%' },
+          ' ', h('span', { class: 'study-yours', text: '→ あなたなら約+' + kg0(yours) + 'kg' }))
       );
     }));
   }
-
-  // ---- 描画: メニュー ----
-  function rirText(rir) {
-    return rir >= 5 ? 'たっぷり残す（あと5回以上）' : 'あと' + rir + '回できる余力を残す';
-  }
-
-  function renderDay(d) {
-    if (d.type === 'test') {
-      return h('article', { class: 'day day-test' },
-        h('h4', { class: 'day-title' }, d.name + '　' + d.label, h('span', { class: 'badge badge-test', text: '測定' })),
-        h('p', { class: 'day-lead', text: '軽めの確認の日から2〜3日あけて行います。1本ごとに5分ほど休みます。' }),
-        h('ol', { class: 'test-steps' },
-          d.warmup.map(w => h('li', null, h('span', { class: 'ts-weight', text: kg(w.weight) + 'kg ×' + w.reps + 'rep' }), h('span', { class: 'ts-note', text: 'ウォームアップ' }))),
-          d.attempts.map((a, i) => h('li', { class: 'is-attempt' }, h('span', { class: 'ts-weight', text: (i + 1) + '本目 ' + kg(a.weight) + 'kg ×1rep' }), h('span', { class: 'ts-note', text: a.note })))
-        ),
-        h('p', { class: 'test-next', text: '1本目が楽に挙がったら2本目へ。きつかったら、そこで終わりにします。' })
-      );
-    }
-    return h('article', { class: 'day' },
-      h('h4', { class: 'day-title' }, d.name + '　' + d.label),
-      h('ul', { class: 'ex-list' },
-        h('li', { class: 'ex' + (d.type === 'light' || d.type === 'opener' ? ' is-light' : '') },
-          h('div', { class: 'ex-top' }, h('span', { text: 'バックスクワット' })),
-          h('div', { class: 'ex-load' },
-            h('span', { class: 'ex-weight' }, kg(d.weight), h('small', { text: 'kg' })),
-            h('span', { class: 'ex-sets', text: '×' + d.reps + 'rep ' + d.sets + 'set' })
-          ),
-          h('div', { class: 'ex-meta' },
-            h('span', { text: '余力 ' + rirText(d.rir) }),
-            h('span', { text: '休憩 ' + d.rest }),
-            h('span', { text: '今のMAXの' + Math.round(d.pctOfMax * 100) + '%' })
-          )
-        )
-      )
-    );
-  }
-
-  function renderWeek(w, i) {
-    const isTest = w.phase === 'test';
-    const panel = h('section', {
-      class: 'week-panel',
-      role: 'tabpanel',
-      id: 'panel-w' + w.week,
-      'aria-labelledby': 'tab-w' + w.week,
-      tabindex: '0',
-      hidden: i !== 0
-    });
-    panel.append(
-      h('div', { class: 'week-head' },
-        h('h3', null, '第' + w.week + '週', h('span', { class: 'badge' + (isTest ? ' badge-test' : ''), text: w.phaseName })),
-        h('p', { class: 'week-note', text: w.note + (isTest ? '' : '重さは、控えめな予測でこの週までに伸びたMAX（' + kg(w.projMax) + 'kg）から計算した目安です。') })
-      ),
-      h('div', { class: 'days' }, w.days.map(renderDay))
-    );
-    return panel;
-  }
-
-  function renderMenu(prog) {
-    tabsEl.replaceChildren(...prog.weeks.map((w, i) => {
-      const isTest = w.phase === 'test';
-      return h('button', {
-        type: 'button',
-        role: 'tab',
-        id: 'tab-w' + w.week,
-        'aria-controls': 'panel-w' + w.week,
-        'aria-selected': i === 0 ? 'true' : 'false',
-        tabindex: i === 0 ? '0' : '-1',
-        class: 'tab' + (isTest ? ' is-test' : ''),
-        onclick: () => selectWeek(i, false)
-      },
-      h('span', { text: w.week + '週' }),
-      h('span', { class: 'tab-tag', text: w.phaseName }));
-    }));
-    panelsEl.replaceChildren(...prog.weeks.map(renderWeek));
-  }
-
-  function selectWeek(index, focus) {
-    const tabs = Array.from(tabsEl.children);
-    const panels = Array.from(panelsEl.children);
-    tabs.forEach((t, i) => {
-      const on = i === index;
-      t.setAttribute('aria-selected', on ? 'true' : 'false');
-      t.tabIndex = on ? 0 : -1;
-    });
-    panels.forEach((p, i) => { p.hidden = i !== index; });
-    const tab = tabs[index];
-    if (tab) {
-      if (focus) tab.focus();
-      tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }
-  }
-
-  tabsEl.addEventListener('keydown', e => {
-    const tabs = Array.from(tabsEl.children);
-    const cur = tabs.indexOf(document.activeElement);
-    if (cur < 0) return;
-    let next = null;
-    if (e.key === 'ArrowRight') next = (cur + 1) % tabs.length;
-    else if (e.key === 'ArrowLeft') next = (cur - 1 + tabs.length) % tabs.length;
-    else if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = tabs.length - 1;
-    if (next == null) return;
-    e.preventDefault();
-    selectWeek(next, true);
-  });
 
   // スクワット プログラムメーカーへのリンク（MAX・体重・週数を引き継ぐ）
   function updateProgramLink(n) {
-    const link = document.getElementById('program-link');
-    if (!link) return;
     const p = new URLSearchParams();
     p.set('m', kg(n.max));
     p.set('bw', kg(n.bw));
     if ([4, 6, 8, 10, 12].indexOf(n.weeks) >= 0) p.set('wk', String(n.weeks));
-    p.set('f', String(n.freq));
-    link.href = '/squat-program/?' + p.toString();
+    programLink.href = '/squat-program/?' + p.toString();
   }
 
   // ---- 計算 ----
   function calculate(scroll) {
     const s = readForm();
-    const n = SQ.normalizeInput({ max: currentMax(s), bw: s.bw, weeks: s.weeks, freq: s.freq, target: s.target });
+    const n = SQ.normalizeInput({ max: currentMax(s), bw: s.bw, weeks: s.weeks, target: s.target });
     const errors = SQ.validate(n);
     if (errors.length) {
       errorBox.replaceChildren(...errors.map(t => h('span', { class: 'error-line', text: t })));
@@ -343,17 +201,16 @@
       return false;
     }
     errorBox.hidden = true;
-    const prog = SQ.buildProgram(n);
-    currentInput = prog.input;
-    renderPrediction(prog);
-    renderVerdict(prog);
-    renderStudies(prog);
-    renderMenu(prog);
-    updateProgramLink(prog.input);
+    const p = SQ.predict(n.max, n.bw, n.weeks);
+    current = n;
+    renderPrediction(n, p);
+    renderVerdict(n, p);
+    renderStudies(n, p);
+    updateProgramLink(n);
     resultSection.hidden = false;
     shareBox.hidden = true;
     save(s);
-    updateUrl(prog.input);
+    updateUrl(n);
     if (scroll) resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return true;
   }
@@ -366,8 +223,8 @@
   form.addEventListener('input', e => { if (e.target.name === 'liftW' || e.target.name === 'liftR') syncMode(); });
 
   shareBtn.addEventListener('click', async () => {
-    if (!currentInput) return;
-    const url = baseUrl() + '?' + toParams(currentInput).toString();
+    if (!current) return;
+    const url = baseUrl() + '?' + toParams(current).toString();
     shareInput.value = url;
     shareBox.hidden = false;
     try {
@@ -379,8 +236,6 @@
       shareStatus.textContent = 'リンクを選択しました。コピーして共有してください。';
     }
   });
-
-  printBtn.addEventListener('click', () => window.print());
 
   // ---- 起動時: URL のパラメータ → 前回の入力 の順で復元 ----
   const fromUrl = fromParams(location.search);
