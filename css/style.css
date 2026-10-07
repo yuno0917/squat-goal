@@ -694,3 +694,14 @@ select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .form-more > .field-grid { margin: 12px 0 0; }
 .form-more > fieldset { margin: 12px 0 0; }
 .field-grid > fieldset { margin: 0; }
+
+/* 紹介リンク（アフィリエイト）。広告であることがわかるように「PR」をつける */
+.pr-note { margin: 8px 0 0; color: var(--muted); font-size: .8rem; }
+.pr-box { margin: 24px 0; padding: 16px 20px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.pr-box h2, .pr-box .pr-title { margin: 0 0 8px; font-size: 1.1rem; font-weight: 800; }
+.pr-label { display: inline-block; margin-right: 8px; padding: 0 6px; border: 1px solid var(--muted); border-radius: 4px; color: var(--muted); font-size: .72rem; font-weight: 700; line-height: 1.6; vertical-align: middle; }
+.pr-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.pr-links a { display: block; height: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); font-weight: 700; text-decoration: none; }
+.pr-links a:hover { border-color: var(--accent); }
+.pr-links small { display: block; margin-top: 2px; color: var(--muted); font-size: .8rem; font-weight: 400; }
+@media print { .pr-box, .pr-note { display: none !important; } }
