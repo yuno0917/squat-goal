@@ -701,7 +701,10 @@ select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .pr-box h2, .pr-box .pr-title { margin: 0 0 8px; font-size: 1.1rem; font-weight: 800; }
 .pr-label { display: inline-block; margin-right: 8px; padding: 0 6px; border: 1px solid var(--muted); border-radius: 4px; color: var(--muted); font-size: .72rem; font-weight: 700; line-height: 1.6; vertical-align: middle; }
 .pr-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.pr-box ul.pr-links { padding-left: 0; }
 .pr-links a { display: block; height: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); font-weight: 700; text-decoration: none; }
 .pr-links a:hover { border-color: var(--accent); }
 .pr-links small { display: block; margin-top: 2px; color: var(--muted); font-size: .8rem; font-weight: 400; }
+.pr-items a { display: flex; align-items: center; gap: 12px; }
+.pr-items img { flex: none; width: 72px; height: 72px; border-radius: 8px; background: #fff; object-fit: contain; }
 @media print { .pr-box, .pr-note { display: none !important; } }
