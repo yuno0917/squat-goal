@@ -710,3 +710,5 @@ select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 @media print { .pr-box, .pr-note { display: none !important; } }
 .select-wide { width: 100%; max-width: 100%; }
 .sub-result { margin-top: 20px; }
+/* 表の行見出しを1行にする（狭い画面では表を横にスクロール） */
+.data-table th.nowrap { white-space: nowrap; }
